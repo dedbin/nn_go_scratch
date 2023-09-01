@@ -1,6 +1,6 @@
 # Flower Classification Neural Network
 
-This project implements a neural network in Go for classifying different types of flowers based on their features. It uses a dataset of flower images to train the model.
+This project implements a neural network in Go for classifying types of iris flowers based on their features. It uses a dataset of flower images to train the model.
 
 ## Prerequisites
 
