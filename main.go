@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"math"
 	"math/rand"
 	"time"
@@ -87,7 +88,30 @@ func (nn *nn) train(X *mat.Dense, y *mat.Dense) error {
 // X: The input matrix to be used for prediction.
 // Returns the predicted matrix and an error if any.
 func (nn *nn) predict(X *mat.Dense) (*mat.Dense, error) {
+	if nn.wHidden == nil || nn.wOut == nil {
+		return nil, errors.New("the supplied weights are empty")
+	}
+	if nn.bHidden == nil || nn.bOut == nil {
+		return nil, errors.New("the supplied biases are empty")
+	}
 
+	output := new(mat.Dense)
+
+	hidden_layer_input := new(mat.Dense)
+	hidden_layer_input.Mul(X, nn.wHidden)
+	add_b_hidden := func(_, col int, v float64) float64 { return v + nn.bHidden.At(0, col) }
+	hidden_layer_input.Apply(add_b_hidden, hidden_layer_input)
+
+	hidden_layer_activation := new(mat.Dense)
+	apply_sigmoid := func(_, col int, v float64) float64 { return sigmoid(v) }
+	hidden_layer_activation.Apply(apply_sigmoid, hidden_layer_input)
+
+	output_layer_input := new(mat.Dense)
+	output_layer_input.Mul(hidden_layer_activation, nn.wOut)
+	add_b_out := func(_, col int, v float64) float64 { return v + nn.bOut.At(0, col) }
+	output_layer_input.Apply(add_b_out, output_layer_input)
+
+	return output, nil
 }
 
 // backpropagate performs backpropagation on the neural network.
