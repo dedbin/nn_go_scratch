@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"time"
 
+	"gonum.org/v1/gonum/floats"
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -162,7 +163,7 @@ func (nn *nn) backpropagate(x, y, wHidden, bHidden, wOut, bOut, output *mat.Dens
 		w_out_adj.Scale(nn.config.learning_rate, w_out_adj)
 		wOut.Add(wOut, w_out_adj)
 
-		b_out_adj, err := sun_along_axis(0, d_out)
+		b_out_adj, err := sum_along_axis(0, d_out)
 		if err != nil {
 			return err
 		}
@@ -174,7 +175,7 @@ func (nn *nn) backpropagate(x, y, wHidden, bHidden, wOut, bOut, output *mat.Dens
 		w_hidden_adj.Scale(nn.config.learning_rate, w_hidden_adj)
 		wHidden.Add(wHidden, w_hidden_adj)
 
-		b_hidden_adj, err := sun_along_axis(0, d_hidden_layer)
+		b_hidden_adj, err := sum_along_axis(0, d_hidden_layer)
 		if err != nil {
 			return err
 		}
@@ -184,6 +185,13 @@ func (nn *nn) backpropagate(x, y, wHidden, bHidden, wOut, bOut, output *mat.Dens
 	return nil
 }
 
+// sum_along_axis calculates the sum of elements along a specified axis of a matrix.
+// Parameters:
+// - axis: an integer indicating the axis along which the sum is calculated.
+// - mat: a pointer to a mat.Dense matrix.
+// Returns:
+// - out: a pointer to a mat.Dense matrix containing the sum along the specified axis.
+// - error: an error object indicating any error that occurred during the calculation.
 func sum_along_axis(axis int, mat *mat.Dense) (*mat.Dense, error) {
 	num_rows, num_cols := mat.Dims()
 
@@ -193,7 +201,7 @@ func sum_along_axis(axis int, mat *mat.Dense) (*mat.Dense, error) {
 	case 0:
 		data := make([]float64, num_cols)
 		for i := 0; i < num_cols; i++ {
-			row := mat.Row(nil, 1, data)
+			col := mat.Row(nil, 1, data)
 			data[i] = floats.Sum(col)
 
 		}
