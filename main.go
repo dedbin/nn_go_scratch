@@ -125,5 +125,91 @@ func (nn *nn) predict(X *mat.Dense) (*mat.Dense, error) {
 // output: The output of the neural network.
 // error: An error if any occurred during backpropagation.
 func (nn *nn) backpropagate(x, y, wHidden, bHidden, wOut, bOut, output *mat.Dense) error {
+	for i := 0; i < nn.config.num_epochs; i++ {
+		hidden_layer_input := new(mat.Dense)
+		hidden_layer_input.Mul(x, wHidden)
+		add_b_hidden := func(_, col int, v float64) float64 { return v + bHidden.At(0, col) }
+		hidden_layer_input.Apply(add_b_hidden, hidden_layer_input)
 
+		hidden_layer_activation := new(mat.Dense)
+		apply_sigmoid := func(_, col int, v float64) float64 { return sigmoid(v) }
+		hidden_layer_activation.Apply(apply_sigmoid, hidden_layer_input)
+
+		output_layer_input := new(mat.Dense)
+		output_layer_input.Mul(hidden_layer_activation, wOut)
+		add_b_out := func(_, col int, v float64) float64 { return v + bOut.At(0, col) }
+		output.Apply(add_b_out, output_layer_input)
+
+		net_err := new(mat.Dense)
+		net_err.Sub(y, output_layer_input)
+
+		slope_output_layer := new(mat.Dense)
+		apply_sigmoid_prime := func(_, col int, v float64) float64 { return sigmoid_prime(v) }
+		slope_output_layer.Apply(apply_sigmoid_prime, output)
+		slope_hidden_layer := new(mat.Dense)
+		slope_hidden_layer.Mul(slope_output_layer, hidden_layer_activation)
+
+		d_out := new(mat.Dense)
+		d_out.MulElem(slope_output_layer, net_err)
+		err_at_hidden_layer := new(mat.Dense)
+		err_at_hidden_layer.MulElem(slope_hidden_layer, err_at_hidden_layer)
+
+		d_hidden_layer := new(mat.Dense)
+		d_hidden_layer.MulElem(err_at_hidden_layer, wOut.T())
+
+		w_out_adj := new(mat.Dense)
+		w_out_adj.Mul(d_out, hidden_layer_activation)
+		w_out_adj.Scale(nn.config.learning_rate, w_out_adj)
+		wOut.Add(wOut, w_out_adj)
+
+		b_out_adj, err := sun_along_axis(0, d_out)
+		if err != nil {
+			return err
+		}
+		b_out_adj.Scale(nn.config.learning_rate, b_out_adj)
+		bOut.Add(bOut, b_out_adj)
+
+		w_hidden_adj := new(mat.Dense)
+		w_hidden_adj.Mul(x.T(), d_hidden_layer)
+		w_hidden_adj.Scale(nn.config.learning_rate, w_hidden_adj)
+		wHidden.Add(wHidden, w_hidden_adj)
+
+		b_hidden_adj, err := sun_along_axis(0, d_hidden_layer)
+		if err != nil {
+			return err
+		}
+		b_hidden_adj.Scale(nn.config.learning_rate, b_hidden_adj)
+		bHidden.Add(bHidden, b_hidden_adj)
+	}
+	return nil
+}
+
+func sum_along_axis(axis int, mat *mat.Dense) (*mat.Dense, error) {
+	num_rows, num_cols := mat.Dims()
+
+	var out *mat.Dense
+
+	switch axis {
+	case 0:
+		data := make([]float64, num_cols)
+		for i := 0; i < num_cols; i++ {
+			row := mat.Row(nil, 1, data)
+			data[i] = floats.Sum(col)
+
+		}
+		out = mat.NewDense(num_rows, 1, data)
+
+	case 1:
+		data := make([]float64, num_rows)
+		for i := 0; i < num_rows; i++ {
+			row := mat.Row(nil, 1, data)
+			data[i] = floats.Sum(row)
+		}
+		out = mat.NewDense(num_rows, 1, data)
+
+	default:
+		return nil, errors.New("axis must be 0 or 1")
+	}
+
+	return out, nil
 }
