@@ -1,9 +1,13 @@
 package main
 
 import (
+	"encoding/csv"
 	"errors"
+	"log"
 	"math"
 	"math/rand"
+	"os"
+	"strconv"
 	"time"
 
 	"gonum.org/v1/gonum/floats"
@@ -220,4 +224,51 @@ func sum_along_axis(axis int, mat *mat.Dense) (*mat.Dense, error) {
 	}
 
 	return out, nil
+}
+
+func make_input_and_labes(filename string) (*mat.Dense, *mat.Dense) {
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	reader.FieldsPerRecord = 7
+
+	raw_csv_data, err := reader.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	inputs_data := make([]float64, 4*len(raw_csv_data))
+	labels_data := make([]float64, 3*len(raw_csv_data))
+
+	var inputs_index int
+	var labels_index int
+
+	for idx, record := range raw_csv_data {
+		if idx == 0 {
+			continue
+		}
+
+		for i, val := range record {
+			parsed_val, err := strconv.ParseFloat(val, 64)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if i == 4 || i == 5 || i == 6 {
+				labels_data[labels_index] = parsed_val
+				labels_index++
+				continue
+			}
+			inputs_data[inputs_index] = parsed_val
+			inputs_index++
+		}
+	}
+	inputs := mat.NewDense(len(raw_csv_data), 4, inputs_data)
+	labels := mat.NewDense(len(raw_csv_data), 3, labels_data)
+
+	return inputs, labels
 }
